@@ -1,0 +1,99 @@
+/* Windows 2000 retro asf */
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Tahoma, "Segoe UI", Verdana, sans-serif;
+  background: #008080;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  overflow: hidden;
+}
+
+/* el h1 girando como loco, retro noventoso */
+h1 {
+  position: relative;
+  font-size: 4rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #000080;
+  text-shadow: 1px 1px 0 #ffffff;
+  background: #c0c0c0;
+  border: 2px solid;
+  border-color: #ffffff #000000 #000000 #ffffff;
+  box-shadow:
+    inset -1px -1px 0 #808080,
+    inset 1px 1px 0 #dfdfdf,
+    0 0 40px rgba(0, 128, 128, 0.9);
+  padding: 8px 20px;
+  border-radius: 0;
+  animation: girar 4s linear infinite;
+}
+
+/* el pedacito azul tipico de la barra de titulo de win2000 */
+h1::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: -2px;
+  right: -2px;
+  height: 8px;
+  background: linear-gradient(90deg, #000080, rgba(255, 255, 255, 0.5));
+  box-shadow: 0 -2px 0 #000000;
+}
+
+/* le mando un mini cubito arriba del h1, tipo icono */
+h1::after {
+  content: "☼";
+  position: absolute;
+  top: -34px;
+  left: 6px;
+  font-size: 18px;
+  color: #ffff00;
+  text-shadow: 1px 1px 0 #000000;
+  animation: parpadear 0.5s steps(2, start) infinite;
+  background: #c0c0c0;
+  padding: 2px 6px;
+  border: 2px solid;
+  border-color: #ffffff #000000 #000000 #ffffff;
+}
+
+@keyframes girar {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(15deg) scale(1.1);
+  }
+  50% {
+    transform: rotate(0deg) scale(1.2);
+  }
+  75% {
+    transform: rotate(-15deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+@keyframes parpadear {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* sniff, para que no quede caliente el fondo */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: -1;
+}
