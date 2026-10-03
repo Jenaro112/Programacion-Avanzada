@@ -1,0 +1,59 @@
+:root {
+  /* Base Neutra (Clara) */
+  --bg-main: #f8fafc;
+  --bg-panel: #ffffff;
+  --bg-hover: #f1f5f9;
+  
+  /* Textos */
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-inverse: #ffffff;
+  
+  /* Acentos (Verde Clarito Fresco y Profesional) */
+  --brand-primary: #10b981; /* Emerald 500 - Acción principal */
+  --brand-hover: #059669;   /* Emerald 600 - Hover acción principal */
+  --brand-light: #d1fae5;   /* Emerald 100 - Focus rings, fondos sutiles */
+  --brand-light-border: #a7f3d0;
+  
+  /* Bordes */
+  --border-subtle: #e2e8f0;
+  --border-focus: #10b981;
+
+  /* Sombras y Radios */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --shadow-panel: -8px 0 30px rgba(15, 23, 42, 0.08);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

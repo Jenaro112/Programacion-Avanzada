@@ -1,0 +1,95 @@
+# * Docker Compose - Orquestador de contenedores para el TP5
+# ? Docker Compose permite definir y ejecutar múltiples contenedores
+#   como una sola aplicación. En nuestro caso, tenemos 3 servicios:
+#   1. Frontend (React + Vite)
+#   2. Backend (Express.js)
+#   3. Base de datos (PostgreSQL)
+
+# ! La versión "3.8" es compatible con la mayoría de instalaciones de Docker
+version: "3.8"
+
+services:
+  # * Servicio de Base de Datos PostgreSQL
+  # ? PostgreSQL corre dentro de un contenedor y guarda los datos
+  #   en un "volume" para que persistan aunque se reinicie el contenedor
+  db:
+    image: postgres:16-alpine
+    container_name: tp5_postgres
+    restart: unless-stopped
+    environment:
+      # * Variables de entorno que PostgreSQL usa para inicializarse
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: tp5_tareas
+    ports:
+      # * Mapea el puerto 5432 del contenedor al 5432 de tu máquina
+      # ? Esto permite conectarte desde herramientas como pgAdmin o DBeaver
+      - "5432:5432"
+    volumes:
+      # * Volume nombrado para persistir los datos de PostgreSQL
+      # ! Sin esto, los datos se perderían al eliminar el contenedor
+      - postgres_data:/var/lib/postgresql/data
+      # * Script de inicialización de la base de datos
+      # ? PostgreSQL ejecuta automáticamente los .sql en /docker-entrypoint-initdb.d/
+      #   SOLO la primera vez que se crea el contenedor
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    # * Healthcheck para verificar que PostgreSQL esté listo
+    # ? El backend necesita esperar a que la DB esté lista antes de conectarse
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tp5_tareas"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # * Servicio del Backend (API REST con Express.js)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tp5_backend
+    restart: unless-stopped
+    # * Variables de entorno para la conexión a la base de datos
+    # ? Dentro de Docker, los servicios se comunican por el nombre del servicio
+    #   Por eso DB_HOST=db (nombre del servicio de PostgreSQL arriba)
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+      DB_NAME: tp5_tareas
+      PORT: 3001
+      CORS_ORIGIN: http://localhost:5173
+    ports:
+      # * El backend escucha en el puerto 3001
+      - "3001:3001"
+    depends_on:
+      # * El backend espera a que PostgreSQL esté "healthy" antes de iniciar
+      # ! Sin depends_on, el backend podría intentar conectarse antes de que
+      #   PostgreSQL esté listo, causando errores de conexión
+      db:
+        condition: service_healthy
+
+  # * Servicio del Frontend (React + Vite)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tp5_frontend
+    restart: unless-stopped
+    environment:
+      # * La URL del backend que React usa para hacer fetch
+      # ? VITE_ prefix es necesario para que Vite exponga la variable al navegador
+      # ! Como el navegador accede al backend directamente (no desde el contenedor),
+      #   usamos localhost:3001, no el nombre del servicio Docker
+      VITE_API_URL: http://localhost:3001/api/tareas
+    ports:
+      # * Vite sirve el frontend en el puerto 5173
+      - "5173:5173"
+    depends_on:
+      - backend
+
+# * Volumes nombrados para persistencia de datos
+# ? Los volumes nombrados sobreviven a docker-compose down
+# ! Para borrar los datos completamente: docker-compose down -v
+volumes:
+  postgres_data:
