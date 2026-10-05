@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-sans), system-ui, -apple-system, sans-serif;
+
+  /* Paleta "Premium Soft Light" - Cálida, sedosa y relajante */
+  --color-background: #F8F7F4; /* Lino cálido / Off-white muy suave */
+  --color-surface: #FFFFFF; /* Blanco puro para las tarjetas */
+  --color-surface-hover: #F2F0EB; 
+  
+  --color-border-subtle: #EBE9E4; /* Gris cálido casi invisible */
+  --color-border-strong: #D6D3CD;
+
+  --color-text-primary: #2B2928; /* Gris carbón (menos agresivo que el negro puro) */
+  --color-text-secondary: #75716C; /* Piedra suave */
+  --color-text-tertiary: #A8A39D; /* Arena */
+
+  /* Acentos apagados, orgánicos y premium */
+  --color-accent-primary: #C2A88D; /* Taupe / Oro apagado */
+  
+  /* Semántica de estado suave (Tonos tierra/pastel) */
+  --color-semantic-success: #9BAA95; /* Salvia / Sage green */
+  --color-semantic-warning: #D9B382; /* Ocre suave */
+  --color-semantic-error: #C28B8B; /* Rosa viejo / Muted rose */
+}
+
+@layer base {
+  :root {
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+    overflow-x: hidden;
+  }
+
+  * {
+    border-color: var(--color-border-subtle);
+  }
+
+  /* Barras de desplazamiento muy suaves */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #EBE9E4;
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #D6D3CD;
+  }
+}

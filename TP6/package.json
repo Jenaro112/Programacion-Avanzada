@@ -1,0 +1,8 @@
+{
+  "name": "activation-poc",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "libs/*"
+  ]
+}

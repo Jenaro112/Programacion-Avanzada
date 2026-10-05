@@ -1,0 +1,75 @@
+
+services:
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka-broker
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_LISTENERS: EXTERNAL://0.0.0.0:9092,INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: EXTERNAL://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+    ports:
+      - "9092:9092"
+
+  kafka-init:
+    image: apache/kafka:latest
+    depends_on:
+      - kafka
+    command: >
+      bash -c "
+      echo 'Esperando a que Kafka acepte conexiones...'
+      while ! /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --list > /dev/null 2>&1; do
+        sleep 2
+      done
+      echo 'Kafka está listo. Creando tópicos...'
+      /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic activation.requested --bootstrap-server kafka:29092 --partitions 3 --replication-factor 1
+      /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic billing.events --bootstrap-server kafka:29092 --partitions 3 --replication-factor 1
+      /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic provisioning.events --bootstrap-server kafka:29092 --partitions 3 --replication-factor 1
+      /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic notification.events --bootstrap-server kafka:29092 --partitions 3 --replication-factor 1
+      echo 'Tópicos creados exitosamente.'
+      "
+
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongodb
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-init:
+    image: mongo:6.0
+    depends_on:
+      mongo:
+        condition: service_healthy
+    command: >
+      bash -c "
+      mongosh --host mongo:27017 --eval 'rs.initiate({_id: \"rs0\", members: [{_id: 0, host: \"mongo:27017\"}]})'
+      "
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      - kafka
