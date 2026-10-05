@@ -1,56 +1,139 @@
-# 🚀 Kafka Saga Orchestrator & Premium UI
+# Kafka Saga Orchestrator
 
-Este proyecto es una demostración avanzada de **Arquitectura Orientada a Eventos (EDA)** implementando el **Patrón Saga** y el **Patrón Outbox**, visualizado en tiempo real a través de una interfaz gráfica de altísima calidad (Premium UI / Motion Primitives).
+Proyecto práctico sobre **Arquitectura Orientada a Eventos (EDA)**, utilizando los patrones **Saga** y **Transactional Outbox**. El sistema simula la activación de servicios de telecomunicaciones mediante varios microservicios que se comunican de forma asíncrona utilizando Apache Kafka.
 
-## 🏗 Arquitectura del Sistema
+Además, cuenta con una interfaz web para visualizar el estado del proceso y los eventos que se generan durante la ejecución.
 
-El sistema simula un flujo de activación de servicios de telecomunicaciones (Ej: Fibertel/Flow), donde múltiples microservicios reaccionan a eventos de manera asíncrona y distribuida.
+## Arquitectura
 
-### Tecnologías Core
-- **Frontend:** Next.js / React, TailwindCSS, GSAP (Animaciones de grado Awwwards, Morphing, Clip-Paths).
-- **Backend:** NestJS, KafkaJS, WebSockets (Socket.io).
-- **Base de Datos:** MongoDB (Transacciones ACID para el patrón Outbox).
-- **Mensajería:** Apache Kafka (Modo KRaft) + Kafka UI.
-- **Mailing:** Mailhog (Servidor SMTP de prueba local).
+El sistema representa un flujo de activación de servicios en el que intervienen distintos microservicios. Cada servicio procesa los eventos que le corresponden y genera nuevos eventos según el resultado de sus operaciones.
 
-### Patrones de Diseño Implementados
-1. **Saga Pattern (Coreografía):** Coordinación de transacciones distribuidas sin un orquestador central estricto. Si un servicio falla (ej. Aprovisionamiento), se emiten eventos de compensación (`BillingAccountCancelled`) para realizar un Rollback seguro y automático.
-2. **Transactional Outbox:** Garantiza que la escritura en la base de datos (MongoDB) y la emisión del mensaje a Kafka ocurran de forma atómica y consistente, evitando la pérdida de eventos ante caídas de red.
-3. **Fan-Out:** Un solo evento (`ActivationRequested`) es consumido paralelamente por múltiples microservicios autónomos (Billing y Provisioning) gracias a la separación por Consumer Groups.
-4. **Event Sourcing (Memoria Histórica):** Capacidad de reconstruir el estado del sistema conectando un nuevo consumidor y leyendo la bitácora inmutable de Kafka desde el offset más antiguo (`earliest`).
+### Tecnologías
 
-## ⚙️ Cómo Levantar el Proyecto
+* **Frontend:** React / Next.js, TailwindCSS, GSAP
+* **Backend:** NestJS, KafkaJS, WebSockets (Socket.io)
+* **Base de datos:** MongoDB
+* **Mensajería:** Apache Kafka en modo KRaft
+* **Kafka UI:** interfaz para visualizar topics y mensajes
+* **Mailing:** MailHog para pruebas de correo electrónico
 
-### 1. Levantar la Infraestructura (Docker)
-En la raíz del proyecto (`TP6`), ejecuta:
+## Patrones implementados
+
+### Saga
+
+Se utiliza una Saga basada en coreografía. No existe un componente central encargado de coordinar todas las operaciones, sino que cada microservicio reacciona a los eventos correspondientes.
+
+Por ejemplo, si el aprovisionamiento de un servicio falla después de que se haya creado una cuenta de facturación, se genera un evento de compensación (`BillingAccountCancelled`) para deshacer la operación anterior.
+
+### Transactional Outbox
+
+El patrón Outbox se utiliza para mantener la consistencia entre las operaciones realizadas en MongoDB y los eventos que posteriormente se publican en Kafka.
+
+Los eventos se almacenan junto con la operación de negocio y luego son procesados para su publicación, reduciendo el riesgo de perder mensajes cuando ocurre un error durante la comunicación con Kafka.
+
+### Fan-Out
+
+El evento `ActivationRequested` puede ser procesado por distintos microservicios de forma independiente.
+
+Billing y Provisioning utilizan diferentes Consumer Groups, por lo que ambos reciben el evento y pueden ejecutar sus respectivas operaciones sin depender uno del otro.
+
+### Lectura de eventos históricos
+
+Kafka permite reconstruir el estado del proceso a partir de los eventos almacenados en los topics.
+
+Para esto se puede iniciar un consumidor desde el offset `earliest` y procesar nuevamente los eventos disponibles.
+
+## Cómo ejecutar el proyecto
+
+### 1. Iniciar la infraestructura
+
+Desde la raíz del proyecto:
+
 ```bash
 docker compose up -d
 ```
-Esto levantará:
-- **Kafka Broker:** `localhost:9092`
-- **Kafka UI:** `http://localhost:8080` (Para ver topics, particiones y mensajes en vivo).
-- **MongoDB:** `localhost:27017`
-- **Mailhog:** `http://localhost:8025` (Para ver los correos de bienvenida interceptados).
 
-### 2. Levantar el Backend (API NestJS)
-Abre una nueva terminal en la carpeta raíz y ejecuta:
+Esto inicia los siguientes servicios:
+
+* Kafka: `localhost:9092`
+* Kafka UI: `http://localhost:8080`
+* MongoDB: `localhost:27017`
+* MailHog: `http://localhost:8025`
+
+Kafka UI permite consultar los topics, particiones y mensajes generados durante la ejecución.
+
+MailHog permite visualizar los correos enviados por el sistema sin utilizar un servidor SMTP externo.
+
+### 2. Iniciar el backend
+
+En una terminal:
+
 ```bash
 cd apps/api
 npm install
 npm run start:dev
 ```
-*El backend se conectará a Kafka, inicializará los microservicios y abrirá el gateway de WebSockets en el puerto 3000.*
 
-### 3. Levantar el Frontend (React / Vite / Next)
-Abre otra terminal y ejecuta:
+El backend inicia la API, las conexiones con Kafka y el gateway de WebSockets utilizado para enviar actualizaciones al frontend.
+
+### 3. Iniciar el frontend
+
+En otra terminal:
+
 ```bash
 cd apps/demo-ui
 npm install
 npm run dev
 ```
-Accede a la interfaz interactiva abriendo **http://localhost:5173** en tu navegador.
 
-## 🎨 UI/UX Features (Motion Primitives)
-- **Liquid Morphing Button:** Botón de acción magnético que muta su geometría (de círculo a píldora) y ejecuta un llenado líquido dinámico, invirtiendo el color del texto mediante un recorte espacial (Clip-Path).
-- **Bitácora Reactiva en Tiempo Real:** Un *ledger* asíncrono con animaciones en cascada (`stagger`, `back.out`) que dibuja eventos sin colisiones de estado.
-- **Sincronización Estricta (State Machine):** La interfaz visual no tiene contadores ciegos. El avance de la barra de progreso está atado estrictamente a la confirmación real de los eventos en la red de Kafka, cerrando el flujo únicamente al detectar las señales terminales (`NotificationSend`, `Cancelled`).
+Luego acceder a:
+
+```text
+http://localhost:5173
+```
+
+## Interfaz
+
+La interfaz permite seguir el flujo de activación mientras los distintos servicios procesan los eventos.
+
+Entre las principales funcionalidades se encuentran:
+
+* Ejecución del proceso de activación.
+* Visualización de los eventos recibidos en tiempo real.
+* Estado del proceso de Saga.
+* Visualización de operaciones exitosas y compensaciones.
+* Actualización del progreso a partir de los eventos recibidos desde el backend.
+
+La interfaz utiliza GSAP para las animaciones y WebSockets para recibir las actualizaciones sin necesidad de realizar consultas periódicas al servidor.
+
+## Flujo general
+
+El proceso puede resumirse de la siguiente manera:
+
+```text
+ActivationRequested
+        │
+        ├───────────────┐
+        ▼               ▼
+     Billing       Provisioning
+        │               │
+        ▼               ▼
+   BillingCreated   ServiceProvisioned
+        │               │
+        └───────┬───────┘
+                ▼
+        NotificationSend
+```
+
+En caso de que una de las operaciones falle, se generan los eventos de compensación correspondientes para revertir las operaciones que ya se habían realizado.
+
+## Estructura principal
+
+```text
+TP6/
+├── apps/
+│   ├── api/
+│   └── demo-ui/
+├── docker-compose.yml
+└── README.md
+```
