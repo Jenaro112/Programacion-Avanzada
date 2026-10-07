@@ -69,9 +69,9 @@ MailHog permite visualizar los correos enviados por el sistema sin utilizar un s
 En una terminal:
 
 ```bash
-cd apps/api
+cd apps/activation-api
 npm install
-npm run start:dev
+npm run start:dev   # o también: npm run dev
 ```
 
 El backend inicia la API, las conexiones con Kafka y el gateway de WebSockets utilizado para enviar actualizaciones al frontend.
@@ -132,7 +132,7 @@ En caso de que una de las operaciones falle, se generan los eventos de compensac
 ```text
 TP6/
 ├── apps/
-│   ├── api/
+│   ├── activation-api/
 │   └── demo-ui/
 ├── docker-compose.yml
 └── README.md

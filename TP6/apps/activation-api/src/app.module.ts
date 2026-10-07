@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { MongooseModule } from '@nestjs/mongoose';
+import { Partitioners } from 'kafkajs';
 import * as mongoose from 'mongoose';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -42,9 +43,12 @@ const OutboxSchema = new mongoose.Schema({
         options: {
           client: {
             clientId: 'activation-api',
-            brokers: [process.env.KAFKA_BROKERS || '127.0.0.1:9092'],
+            brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
           },
-          producerOnlyMode: true
+          producer: {
+            createPartitioner: Partitioners.LegacyPartitioner,
+          },
+          producerOnlyMode: true,
         },
       },
     ]),

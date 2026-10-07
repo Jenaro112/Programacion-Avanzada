@@ -1,10 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
-import { Logger } from '@nestjs/common';
+import pc from 'picocolors';
 
 async function bootstrap() {
-  const logger = new Logger('Bootstrap');
-
   // * Creamos la app HTTP pura (sin microservicio Kafka consumidor).
   // ? ¿Por qué no levantamos el consumidor Kafka aquí?
   // * Porque los microservicios (billing, provisioning) se simulan dentro
@@ -17,11 +15,15 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
 
-  logger.log(`\n${'═'.repeat(60)}`);
-  logger.log(`🚀 Activation-API corriendo en http://localhost:3000`);
-  logger.log(`📡 Kafka Producer conectado a 127.0.0.1:9092`);
-  logger.log(`💾 MongoDB conectado a 127.0.0.1:27017`);
-  logger.log(`🖥️  Frontend en http://localhost:5173`);
-  logger.log(`${'═'.repeat(60)}\n`);
+  const boxWidth = 56;
+  const line = '─'.repeat(boxWidth);
+
+  console.log('\n' + pc.dim('┌' + line + '┐'));
+  console.log(pc.dim('│ ') + pc.bold('Activation API') + pc.dim(' (EDA Saga Coreografía)'));
+  console.log(pc.dim('│ ') + pc.dim('  HTTP Server   : ') + pc.cyan('http://localhost:3000'));
+  console.log(pc.dim('│ ') + pc.dim('  Kafka Broker  : ') + pc.cyan('localhost:9092 (KRaft)'));
+  console.log(pc.dim('│ ') + pc.dim('  MongoDB       : ') + pc.cyan('localhost:27017 (ReplSet)'));
+  console.log(pc.dim('│ ') + pc.dim('  Frontend      : ') + pc.cyan('http://localhost:5173'));
+  console.log(pc.dim('└' + line + '┘\n'));
 }
 bootstrap();

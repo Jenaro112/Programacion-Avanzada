@@ -1,8 +1,9 @@
-import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import * as crypto from 'crypto';
+import pc from 'picocolors';
 import { ActivationGateway } from './activation.gateway.js';
 
 // * =========================================================================
@@ -20,8 +21,6 @@ import { ActivationGateway } from './activation.gateway.js';
 
 @Injectable()
 export class ActivationService implements OnModuleInit {
-  private readonly logger = new Logger('KAFKA-SAGA');
-
   constructor(
     @Inject('KAFKA_CLIENT')     private kafkaClient: ClientKafka,
     @InjectModel('Activation')  private activationModel: Model<any>,
@@ -29,76 +28,100 @@ export class ActivationService implements OnModuleInit {
     private readonly gateway:   ActivationGateway
   ) {}
 
+  private now(): string {
+    return new Date().toLocaleTimeString('es-AR', { hour12: false });
+  }
+
+  private logStep(tag: string, message: string, colorFn: (s: string) => string = pc.cyan) {
+    const time = pc.dim(this.now());
+    const badge = colorFn(`[${tag.padEnd(9)}]`);
+    console.log(`  ${time}  ${badge}  ${message}`);
+  }
+
   async onModuleInit() {
-    this.logger.log('Conectando cliente Kafka Producer (KRaft broker 127.0.0.1:9092)...');
     try {
       await this.kafkaClient.connect();
-      this.logger.log('✅ Broker Kafka KRaft conectado y listo.');
+      console.log(`  ${pc.dim(this.now())}  ${pc.green(pc.bold('[KAFKA]   '))}  Broker KRaft conectado en ${pc.cyan('localhost:9092')}`);
     } catch (err) {
-      this.logger.error('Error conectando a Kafka:', err);
+      console.error(pc.red(`  ${this.now()}  [KAFKA-ERR]  Error conectando a Kafka:`), err);
     }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // BANNERS DE TERMINAL NÍTIDOS Y PROFESIONALES
+  // BANNER DE ESCENARIO ELEGANTE Y COMPACTO
   // ─────────────────────────────────────────────────────────────────────────
-  // ! Diseñado para NO romperse con los prefijos de timestamp de NestJS.
-  // ! Usa formato de bloque compacto con separadores sólidos y alineación clara.
   private printScenarioBanner(scenario: number, customerId: string, planId: string) {
-    const banners: Record<number, { title: string; subtitle: string; concept: string }> = {
+    const banners: Record<number, { title: string; subtitle: string; concept: string; color: (s: string) => string }> = {
       1: {
-        title: '🟢 ESCENARIO 1: CAMINO FELIZ (FAN-OUT KAFKA)',
+        title: 'ESCENARIO 1: CAMINO FELIZ (FAN-OUT KAFKA)',
         subtitle: 'Ambos microservicios (Billing y Provisioning) responden con éxito.',
         concept: 'Fan-out: 1 evento de negocio encolado genera N reacciones autónomas.',
+        color: pc.green,
       },
       2: {
-        title: '🟠 ESCENARIO 2: FALLO Y COMPENSACIÓN (SAGA ROLLBACK)',
-        subtitle: 'Provisioning falla; el Agregador ordena a Billing anular la cuenta creada.',
-        concept: 'Saga Compensatoria: Consistencia eventual sin 2PC ni llamadas HTTP directas.',
+        title: 'ESCENARIO 2: FALLO Y COMPENSACIÓN (SAGA ROLLBACK)',
+        subtitle: 'Provisioning falla; Agregador ordena a Billing anular la cuenta.',
+        concept: 'Saga Compensatoria: Consistencia eventual sin 2PC ni llamadas HTTP.',
+        color: pc.yellow,
       },
       3: {
-        title: '🔴 ESCENARIO 3: RESILIENCIA Y RECUPERACIÓN (CONSUMER LAG)',
-        subtitle: 'Simulación de consumidor offline; los mensajes quedan retenidos en el topic.',
-        concept: 'Offsets: Kafka retiene el log inmutable; cero pérdida de mensajes al reconectar.',
+        title: 'ESCENARIO 3: RESILIENCIA Y RECUPERACIÓN (CONSUMER LAG)',
+        subtitle: 'Simulación de consumidor offline; los mensajes quedan retenidos en topic.',
+        concept: 'Offsets: Kafka retiene el log inmutable; cero pérdida al reconectar.',
+        color: pc.magenta,
       },
       4: {
-        title: '⚖️  ESCENARIO 4: ESCALABILIDAD HORIZONTAL (CONSUMER GROUPS)',
-        subtitle: 'Balanceo dinámico de particiones entre múltiples réplicas de un servicio.',
+        title: 'ESCENARIO 4: ESCALABILIDAD HORIZONTAL (CONSUMER GROUPS)',
+        subtitle: 'Balanceo dinámico de particiones entre múltiples réplicas del servicio.',
         concept: 'Particiones = Unidad de paralelismo dentro del mismo Consumer Group.',
+        color: pc.cyan,
       },
       5: {
-        title: '⏪ ESCENARIO 5: NUEVO CONSUMIDOR RETROACTIVO (LOG REPLAY)',
+        title: 'ESCENARIO 5: NUEVO CONSUMIDOR RETROACTIVO (LOG REPLAY)',
         subtitle: 'Servicio nuevo (Loyalty) procesando histórico desde offset = 0.',
-        concept: 'Replay: auto.offset.reset = earliest sin afectar a los consumidores en vivo.',
+        concept: 'Replay: auto.offset.reset = earliest sin afectar consumidores en vivo.',
+        color: pc.blue,
       },
     };
 
     const b = banners[scenario] || {
-      title: '🔵 ESCENARIO DE ACTIVACIÓN ESTÁNDAR',
+      title: 'ESCENARIO DE ACTIVACIÓN ESTÁNDAR',
       subtitle: 'Ejecución del pipeline de eventos Kafka.',
       concept: 'Arquitectura dirigida por eventos (EDA).',
+      color: pc.cyan,
     };
 
-    const sep = '═'.repeat(74);
-    console.log('\n' + sep);
-    console.log(`  ${b.title}`);
-    console.log(`  Subtítulo : ${b.subtitle}`);
-    console.log(`  Concepto  : ${b.concept}`);
-    console.log(`  Parámetros: Cliente=${customerId} | Plan=${planId}`);
-    console.log(sep + '\n');
+    const boxWidth = 70;
+    const border = '─'.repeat(boxWidth);
+
+    console.log('\n' + pc.dim('┌' + border + '┐'));
+    console.log(pc.dim('│ ') + b.color(pc.bold(b.title)));
+    console.log(pc.dim('│ ') + pc.white(b.subtitle));
+    console.log(pc.dim('│ ') + pc.dim('Concepto : ') + pc.yellow(b.concept));
+    console.log(pc.dim('│ ') + pc.dim('Paráms   : ') + pc.cyan(`Cliente: ${customerId}`) + pc.dim(' │ ') + pc.cyan(`Plan: ${planId}`));
+    console.log(pc.dim('└' + border + '┘\n'));
   }
 
-  private emitKafkaAndWS(topic: string, event: any, label: string) {
-    // 1. Emitimos a Kafka real
-    this.kafkaClient.emit(topic, event).subscribe({
-      error: (e) => this.logger.error(`Error emitiendo a Kafka [${topic}]:`, e),
+  private emitKafkaAndWS(
+    topic: string,
+    event: any,
+    tag: string,
+    message: string,
+    colorFn: (s: string) => string = pc.cyan
+  ) {
+    // 1. Emitimos a Kafka real con clave de partición por cliente
+    this.kafkaClient.emit(topic, {
+      key: event.customerId,
+      value: event,
+    }).subscribe({
+      error: (e) => console.error(pc.red(`  ${this.now()}  [KAFKA-ERR]  Error en topic [${topic}]:`), e),
     });
 
     // 2. Notificamos al frontend en tiempo real vía WebSocket
     this.gateway.emitEvent(event);
 
-    // 3. Log nítido en consola
-    this.logger.log(label);
+    // 3. Log nítido formateado en consola
+    this.logStep(tag, message, colorFn);
   }
 
   private delay(ms: number) {
@@ -166,26 +189,26 @@ export class ActivationService implements OnModuleInit {
 
       await session.commitTransaction();
 
-      this.logger.log(`[OUTBOX]      💾 Transacción ACID confirmada en Mongo (Doc + Evento encolado)`);
+      this.logStep('OUTBOX', 'Transacción ACID confirmada en Mongo (Doc + Evento)', pc.magenta);
 
       // * =====================================================================
       // * 2. DISPARO DEL FAN-OUT EN KAFKA
       // * =====================================================================
-      // * customerId se usa como clave de mensaje (key). Kafka garantiza que todos
-      // * los eventos de este cliente caen en la MISMA partición, preservando orden.
       this.emitKafkaAndWS(
         'activation.requested',
         eventPayload,
-        `[FAN-OUT]     📡 Publicado 'ActivationRequested' -> Topic: activation.requested (Key: ${customerId})`
+        'FAN-OUT',
+        `Publicado '${pc.bold('ActivationRequested')}' → topic: activation.requested (key: ${customerId})`,
+        pc.cyan
       );
 
       // * 3. Ejecución simulada de los microservicios de la Saga
-      this.simulateSagaExecution(activationId, customerId, simulateFailure);
+      this.simulateSagaExecution(activationId, customerId, simulateFailure, scenario);
 
       return { activationId, status: 'PENDING' };
     } catch (err) {
       await session.abortTransaction();
-      this.logger.error(`❌ [OUTBOX-FAIL] Error en transacción atómica:`, err);
+      console.error(pc.red(`  ${this.now()}  [OUTBOX-ERR] Error en transacción atómica:`), err);
       throw err;
     } finally {
       session.endSession();
@@ -198,8 +221,19 @@ export class ActivationService implements OnModuleInit {
   private async simulateSagaExecution(
     correlationId: string,
     customerId: string,
-    simulateFailure: string
+    simulateFailure: string,
+    scenario: number = 1
   ) {
+    if (scenario === 3) {
+      this.logStep('LAG-SIM', pc.magenta('Simulación: Consumidor offline temporalmente (Lag acumulado)'), pc.magenta);
+      await this.delay(700);
+      this.logStep('LAG-SYNC', pc.magenta('Consumidor reconectado: procesando backlog desde offsets'), pc.magenta);
+    } else if (scenario === 4) {
+      this.logStep('BALANCE', pc.cyan(`Key '${customerId}' asignada a partición de Consumer Group`), pc.cyan);
+    } else if (scenario === 5) {
+      this.logStep('REPLAY', pc.blue('Consumidor retroactivo (Loyalty) leyendo histórico desde offset = 0'), pc.blue);
+    }
+
     // ── Paso 1: Billing Service procesa (latencia simulada: 1.4s) ───────────
     await this.delay(1400);
 
@@ -216,7 +250,9 @@ export class ActivationService implements OnModuleInit {
       this.emitKafkaAndWS(
         'billing.events',
         billingFailEvent,
-        `[BILLING]     ❌ ERROR: Tarjeta rechazada. Publicando BillingFailed -> Topic: billing.events`
+        'BILLING',
+        `Fallo: Tarjeta rechazada / Fondos insuficientes → topic: billing.events`,
+        pc.red
       );
       await this.handleServiceResult(correlationId, 'billing', 'FAILED');
       return;
@@ -234,7 +270,9 @@ export class ActivationService implements OnModuleInit {
     this.emitKafkaAndWS(
       'billing.events',
       billingOkEvent,
-      `[BILLING]     🏦 Cuenta creada (${billingOkEvent.payload.accountId}) -> Topic: billing.events`
+      'BILLING',
+      `Cuenta creada (${billingOkEvent.payload.accountId}) → topic: billing.events`,
+      pc.yellow
     );
     await this.handleServiceResult(correlationId, 'billing', 'OK');
 
@@ -254,16 +292,13 @@ export class ActivationService implements OnModuleInit {
       this.emitKafkaAndWS(
         'provisioning.events',
         provFailEvent,
-        `[PROVISION]   ❌ ERROR: Central saturada. Publicando ProvisioningFailed -> Topic: provisioning.events`
+        'PROVISION',
+        `Fallo: Central telefónica saturada → topic: provisioning.events`,
+        pc.red
       );
       await this.handleServiceResult(correlationId, 'provisioning', 'FAILED');
 
-      // * ===================================================================
-      // * 3. COMPENSACIÓN SAGA (Rollback Eventual)
-      // * ===================================================================
-      // ! Billing ya creó la cuenta previamente. Dado que Provisioning falló,
-      // ! el sistema no puede quedar inconsistente. Billing escucha 'ActivationFailed'
-      // ! y ejecuta su transacción compensatoria: ANULA LA CUENTA.
+      // Compensación Saga
       await this.delay(1200);
       const compensationEvent = {
         eventId: crypto.randomUUID(),
@@ -277,7 +312,9 @@ export class ActivationService implements OnModuleInit {
       this.emitKafkaAndWS(
         'billing.events',
         compensationEvent,
-        `[COMPENSATE]  🔄 ROLLBACK: Billing anuló la cuenta preliminar -> Consistencia Eventual Garantizada`
+        'ROLLBACK',
+        `Compensación: Cuenta preliminar anulada en Billing (Consistencia Eventual)`,
+        pc.yellow
       );
       return;
     }
@@ -294,7 +331,9 @@ export class ActivationService implements OnModuleInit {
     this.emitKafkaAndWS(
       'provisioning.events',
       provOkEvent,
-      `[PROVISION]   ⚙️  Servicio aprovisionado (${provOkEvent.payload.resourceId}) -> Topic: provisioning.events`
+      'PROVISION',
+      `Servicio configurado (${provOkEvent.payload.resourceId}) → topic: provisioning.events`,
+      pc.blue
     );
     await this.handleServiceResult(correlationId, 'provisioning', 'OK');
 
@@ -316,7 +355,9 @@ export class ActivationService implements OnModuleInit {
     this.emitKafkaAndWS(
       'activation.events',
       notifEvent,
-      `[NOTIFY]      📧 Email de bienvenida despachado -> Mailhog (:8025) para ${notifEvent.payload.to}`
+      'NOTIFY',
+      `Notificación despachada → MailHog (:8025) a ${notifEvent.payload.to}`,
+      pc.green
     );
   }
 
@@ -327,11 +368,9 @@ export class ActivationService implements OnModuleInit {
     const activation = await this.activationModel.findById(correlationId);
     if (!activation) return;
 
-    // * CONTROL DE IDEMPOTENCIA
-    // ! Kafka es At-least-once. Si llega un mensaje duplicado a una saga ya cerrada,
-    // ! se descarta inmediatamente sin producir efectos colaterales.
+    // Control de idempotencia
     if (activation.status === 'ACTIVE' || activation.status === 'FAILED') {
-      this.logger.debug(`[IDEMPOTENT] Saga ${correlationId.slice(0, 8)} ya está ${activation.status}. Descartando.`);
+      this.logStep('IDEMPOTENT', `Saga ${correlationId.slice(0, 8)} ya finalizada (${activation.status}). Descartando duplicado.`, pc.dim);
       return;
     }
 
@@ -351,7 +390,9 @@ export class ActivationService implements OnModuleInit {
       this.emitKafkaAndWS(
         'activation.events',
         failEvent,
-        `[SAGA-END]    🚨 SAGA FALLIDA: Activación pasó a FAILED. Disparando compensaciones.`
+        'SAGA-FAIL',
+        pc.bold(pc.red('Saga FAILED: Activación en fallo. Disparando compensaciones.')),
+        pc.red
       );
     } else if (activation.steps.billing?.status === 'OK' && activation.steps.provisioning?.status === 'OK') {
       activation.status = 'ACTIVE';
@@ -367,7 +408,9 @@ export class ActivationService implements OnModuleInit {
       this.emitKafkaAndWS(
         'activation.events',
         completedEvent,
-        `[SAGA-END]    🎉 SAGA COMPLETADA: Billing OK + Provisioning OK -> Activación ACTIVE.`
+        'SAGA-OK',
+        pc.bold(pc.green('Saga COMPLETADA: Billing OK + Provisioning OK → Activación ACTIVE')),
+        pc.green
       );
     }
 
